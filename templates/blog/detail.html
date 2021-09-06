@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load comments_extras %}
+{% block main %}
+<article class="post post-{{ post.pk }}">
+    <header class="entry-header">
+      <h1 class="entry-title">{{ post.title }}</h1>
+      <div class="entry-meta">
+        <span class="post-category"><a href="#">{{ post.category.name }}</a></span>
+        <span class="post-date"><a href="#"><time class="entry-date"
+                                                  datetime="{{ post.created_time }}">{{ post.created_time }}</time></a></span>
+        <span class="post-author"><a href="#">{{ post.author }}</a></span>
+        <span class="comments-link"><a href="#comment-area">{{ post.comment_set.count }} 评论</a></span>
+        <span class="views-count"><a href="{{ post.get_absolute_url }}">{{ post.views }} 阅读</a></span>
+      </div>
+    </header>
+    <div class="entry-content clearfix">
+      {{ post.body | safe}}
+      <!--django 出于安全方面的考虑，任何的 HTML 代码在 django 的模板中都会被转义
+        （即显示原始的 HTML 代码，而不是经浏览器渲染后的格式）。为了解除转义，
+        只需在模板变量后使用 safe 过滤器即可，告诉 django，这段文本是安全的，
+        你什么也不用做。-->
+    </div>
+</article>
+    <section class="comment-area" id="comment-area">
+        <hr>
+        <h3>发表评论</h3>
+        {% show_comment_form post %}
+        <div class="comment-list-panel">
+            {% show_comments post %}
+        </div>
+    </section>
+{% endblock main %}
+
+{% block toc %}
+    {% if post.toc %}
+    <div class="widget widget-content">
+      <h3 class="widget-title">文章目录</h3>
+      <div class="toc">
+        <ul>
+          {{ post.toc|safe }}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+{% endblock toc %}
