@@ -9,7 +9,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Black &amp; White</title>
+    <title>superPGのBlog</title>
 
     <!-- meta -->
     <meta charset="UTF-8">
@@ -70,7 +70,7 @@
         <div class="row">
             <div class="col-md-4 col-sm-5 col-xs-8">
                 <div class="logo">
-                    <h1><a href="{% url 'myapp:index' %}"><b>Black</b> &amp; White</a></h1>
+                    <h1><a href="{% url 'myapp:index' %}"><b>superPG</b>のBlog</a></h1>
                 </div>
             </div><!-- col-md-4 -->
             <div class="col-md-8 col-sm-7 col-xs-4">
@@ -84,17 +84,17 @@
                     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                         <ul class="nav navbar-nav navbar-right">
                             <li class="cl-effect-11"><a href="{% url 'myapp:index' %}" data-hover="首页">首页</a></li>
-                            <li class="cl-effect-11"><a href="full-width.html" data-hover="博客">博客</a></li>
-                            <li class="cl-effect-11"><a href="about.html" data-hover="关于">关于</a></li>
-                            <li class="cl-effect-11"><a href="contact.html" data-hover="联系">联系</a></li>
+                            <li class="cl-effect-11"><a href="https://www.acwing.com/user/myspace/index/28491/" data-hover="博客">AcWing</a></li>
+                            <li class="cl-effect-11"><a href="https://www.cnblogs.com/superPG/" data-hover="关于">CnBlog</a></li>
+                            <li class="cl-effect-11"><a href="https://github.com/superpg-WA" data-hover="联系">GitHub</a></li>
                         </ul>
                     </div><!-- /.navbar-collapse -->
                 </nav>
-                <div id="header-search-box">
+                <div id="header-search-box">    <!--当用户在这个 input 中输入搜索内容并提交表单后，键入的数据会以键值对的形式提交服务器，这个键的名字就是通过 name 属性指定的。这样服务器就可以根据 name 的值来取得用户输入的内容。-->
                     <a id="search-menu" href="#"><span id="search-icon" class="ion-ios-search-strong"></span></a>
                     <div id="search-form" class="search-form">
-                        <form role="search" method="get" id="searchform" action="#">
-                            <input type="search" placeholder="搜索" required>
+                        <form role="search" method="get" id="searchform" action="{% url 'myapp:search' %}">
+                            <input type="search" name = "q" placeholder="搜索" required>
                             <button type="submit"><span class="ion-ios-search-strong"></span></button>
                         </form>
                     </div>
@@ -135,7 +135,7 @@
                 {% show_tags %}
 
                 <div class="rss">
-                    <a href=""><span class="ion-social-rss-outline"></span> RSS 订阅</a>
+                    <a href="{% url 'rss' %}"><span class="ion-social-rss-outline"></span> RSS 订阅</a>
                 </div>
             </aside>
         </div>

@@ -14,7 +14,7 @@
       </div>
     </header>
     <div class="entry-content clearfix">
-      {{ post.body | safe}}
+      {{ post.body_html | safe}}
       <!--django 出于安全方面的考虑，任何的 HTML 代码在 django 的模板中都会被转义
         （即显示原始的 HTML 代码，而不是经浏览器渲染后的格式）。为了解除转义，
         只需在模板变量后使用 safe 过滤器即可，告诉 django，这段文本是安全的，

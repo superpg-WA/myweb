@@ -2,62 +2,96 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 from .models import Post, Category, Tag
 import markdown
+from django.db.models import Q
 #使用正则表达式需要引入 re 模块
 import re
 from django.utils.text import slugify
 from markdown.extensions.toc import TocExtension
+from django.views.generic import ListView, DetailView
+from django.contrib import messages
 
 # Create your views here.
 
-def index(request):
-    post_list = Post.objects.all().order_by('-created_time')
-    return render(request, 'blog/index.html', context={'post_list': post_list})
+# Django 官方推荐将视图函数，写成视图类
+# 指定 paginate属性后开启分页功能， 其值代表每一页包含多少篇文章
+class IndexView(ListView):
+    model = Post
+    template_name = 'blog/index.html'
+    context_object_name = 'post_list'
+    paginate_by = 10
 
 #index.html 所在blog文件夹是在tempaltes里的。
 
+class ArchiveView(IndexView):
+    def get_queryset(self):
+        year = self.kwargs.get("year")
+        month = self.kwargs.get("month")
+        return (
+            super()
+            .get_queryset()
+            .filter(created_time__year=year, created_time__month=month)
+        )
 
-def archive(request, year, month):
-    post_list = Post.objects.filter(created_time__year=year,
-                                    created_time__month=month
-                                    ).order_by('-created_time')
-    return render(request, 'blog/index.html', context={'post_list': post_list})
+class PostDetailView(DetailView):
+    # 这些属性的含义和 ListView 是一样的
+    model = Post
+    template_name = 'blog/detail.html'
+    context_object_name = 'post'
 
+    def get(self, request, *args, **kwargs):
+        # 覆写 get 方法的目的是因为每当文章被访问一次，就得将文章阅读量 +1
+        # get 方法返回的是一个 HttpResponse 实例
+        # 之所以需要先调用父类的 get 方法，是因为只有当 get 方法被调用后，
+        # 才有 self.object 属性，其值为 Post 模型实例，即被访问的文章 post
+        response = super(PostDetailView, self).get(request, *args, **kwargs)
 
-def detail(request, pk):
-    post = get_object_or_404(Post, pk=pk)
-    md = markdown.Markdown(extensions=[
-                                      'markdown.extensions.extra',
-                                      'markdown.extensions.fenced_code',
-                                      TocExtension(slugify=slugify),
-                                  ])
-    post.body = md.convert(post.body)
-    # 阅读量 +1
-    post.increase_views()
+        # 将文章阅读量 +1
+        # 注意 self.object 的值就是被访问的文章 post
+        self.object.increase_views()
+
+        # 视图必须返回一个 HttpResponse 对象
+        return response
+
     """
-    分析 toc 的内容，如果有目录结构，ul 标签中就有值，否则就没有值。
-    我们可以使用正则表达式来测试 ul 标签中是否包裹有元素来确定是否存在目录。
+    def get_object(self, queryset=None):
+        # 覆写 get_object 方法的目的是因为需要对 post 的 body 值进行渲染
+        post = super().get_object(queryset=None)
+        md = markdown.Markdown(extensions=[
+            'markdown.extensions.extra',
+            'markdown.extensions.codehilite',
+            # 记得在顶部引入 TocExtension 和 slugify
+            TocExtension(slugify=slugify),
+        ])
+        post.body = md.convert(post.body)
+
+        m = re.search(r'<div class="toc">\s*<ul>(.*)</ul>\s*</div>', md.toc, re.S)
+        post.toc = m.group(1) if m is not None else ''
+
+        return post
     """
 
-    m = re.search(r'<div class="toc">\s*<ul>(.*)</ul>\s*</div>', md.toc, re.S)
-    post.toc = m.group(1) if m is not None else ''
+class CategoryView(ListView):
+    model = Post
+    template_name = 'blog/index.html'
+    context_object_name = 'post_list'
 
-    """
-    这里我们正则表达式去匹配生成的目录中包裹在 ul 标签中的内容，如果不为空，说明有目录，
-    就把 ul 标签中的值提取出来（目的是只要包含目录内容的最核心部分，
-    多余的 HTML 标签结构丢掉）赋值给 post.toc；否则，将 post 的 toc 置为空字符串，
-    然后我们就可以在模板中通过判断 post.toc 是否为空，来决定是否显示侧栏目录：
-    """
+    def get_queryset(self):
+        cate = get_object_or_404(Category, pk=self.kwargs.get('pk'))
+        return super(CategoryView, self).get_queryset().filter(category=cate)
 
-    return render(request, 'blog/detail.html', context={'post': post})
+class TagView(IndexView):
+    def get_queryset(self):
+        t = get_object_or_404(Tag, pk=self.kwargs.get("pk"))
+        return super().get_queryset().filter(tags=t)
 
-def category(request, pk):
-    # 记得在开始部分导入 Category 类
-    cate = get_object_or_404(Category, pk=pk)
-    post_list = Post.objects.filter(category=cate).order_by('-created_time')
-    return render(request, 'blog/index.html', context={'post_list': post_list})
+def search(request):
+    q = request.GET.get('q')
 
-def tag(request, pk):
-    # 记得在开始部分导入 Tag 类
-    t = get_object_or_404(Tag, pk=pk)
-    post_list = Post.objects.filter(tags=t).order_by('-created_time')
-    return render(request, 'blog/index.html', context={'post_list': post_list})
+    #如果用户没有输入搜索关键词而提交了表单，我们就无需执行查询，我们给给用户发一条错误提醒消息
+    if not q:
+        error_msg = "请输入搜索关键词"
+        messages.add_message(request, messages.ERROR, error_msg, extra_tags='danger')
+        return redirect('blog:index')
+
+    post_list = Post.objects.filter(Q(title__icontains=q) | Q(body__icontains=q))
+    return render(request, 'blog/index.html', {'post_list': post_list})
